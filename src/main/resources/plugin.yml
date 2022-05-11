@@ -9,5 +9,3 @@ depend:
 permissions:
   trash.command.gui:
     default: true
-  trash.command.all:
-    default: true

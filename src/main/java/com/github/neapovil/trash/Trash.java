@@ -1,21 +1,20 @@
 package com.github.neapovil.trash;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-
+import org.bukkit.Material;
+import org.bukkit.event.inventory.ClickType;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitTask;
 
+import com.github.stefvanschie.inventoryframework.gui.GuiItem;
 import com.github.stefvanschie.inventoryframework.gui.type.ChestGui;
+import com.github.stefvanschie.inventoryframework.pane.PatternPane;
+import com.github.stefvanschie.inventoryframework.pane.util.Pattern;
 
 import dev.jorel.commandapi.CommandAPICommand;
-import dev.jorel.commandapi.arguments.LiteralArgument;
 
 public final class Trash extends JavaPlugin
 {
     private static Trash instance;
-    private Map<UUID, BukkitTask> task = new HashMap<>();
 
     @Override
     public void onEnable()
@@ -26,22 +25,54 @@ public final class Trash extends JavaPlugin
                 .withPermission("trash.command.gui")
                 .executesPlayer((player, args) -> {
                     final ChestGui gui = new ChestGui(1, "Trash");
+                    final Pattern pattern = new Pattern("111101111");
+                    final PatternPane pane = new PatternPane(0, 0, 9, 1, pattern);
+                    final GuiItem guiitem = new GuiItem(new ItemStack(Material.GRAY_STAINED_GLASS_PANE));
 
-                    task.put(player.getUniqueId(), this.getServer().getScheduler().runTaskTimer(this, () -> gui.getInventory().clear(), 0, 1));
+                    guiitem.setAction(event -> event.setCancelled(true));
 
-                    gui.setOnClose(event -> {
-                        task.remove(player.getUniqueId()).cancel();
+                    pane.bindItem('1', guiitem);
+
+                    gui.addPane(pane);
+
+                    gui.setOnBottomClick(event -> {
+                        if (!event.getClick().equals(ClickType.SHIFT_LEFT))
+                        {
+                            return;
+                        }
+
+                        if (event.getCurrentItem() == null)
+                        {
+                            return;
+                        }
+
+                        event.getCurrentItem().setAmount(0);
+                    });
+
+                    gui.setOnOutsideClick(event -> event.setCancelled(true));
+
+                    gui.setOnTopClick(event -> {
+                        if (event.getCursor() == null)
+                        {
+                            return;
+                        }
+
+                        if (event.getCurrentItem() != null)
+                        {
+                            return;
+                        }
+
+                        if (event.getClick().equals(ClickType.RIGHT))
+                        {
+                            event.getCursor().setAmount(event.getCursor().getAmount() - 1);
+                            event.setCancelled(true);
+                            return;
+                        }
+
+                        event.getCursor().setAmount(0);
                     });
 
                     gui.show(player);
-                })
-                .register();
-
-        new CommandAPICommand("trash")
-                .withArguments(new LiteralArgument("all").withPermission("trash.command.all"))
-                .executesPlayer((player, args) -> {
-                    player.getInventory().clear();
-                    player.sendMessage("Inventory cleared.");
                 })
                 .register();
     }
